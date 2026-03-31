@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NexusChat</string>
+    <string name="title_activity_main">NexusChat</string>
+    <string name="package_name">com.gamingkrew.nexuschat</string>
+    <string name="custom_url_scheme">com.gamingkrew.nexuschat</string>
+</resources>
