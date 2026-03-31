@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'NexusChat',
   webDir: 'public',
   server: {
-    url: 'http://10.0.2.2:3000',
+    url: 'https://nexus-chat-puce.vercel.app',
     cleartext: true
   }
 };
