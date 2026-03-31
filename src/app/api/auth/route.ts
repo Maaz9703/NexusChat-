@@ -25,6 +25,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User not found. Please provide a name to register.' }, { status: 404 });
     }
 
+    // Ensure the "Nexus AI" contact exists
+    const aiPhone = "00000000000";
+    let aiUser = await User.findOne({ phone: aiPhone });
+    if (!aiUser) {
+      aiUser = await User.create({
+        phone: aiPhone,
+        name: "Nexus AI (Bot)",
+        about: "Always here to help you test NexusChat!",
+        isOnline: true
+      });
+    }
+
     // Update last seen
     if (user) {
       user.lastSeen = Date.now();
@@ -34,7 +46,13 @@ export async function POST(req: Request) {
     // Send back minimal user object
     return NextResponse.json({
         success: true,
-        user: { _id: user._id, name: user.name, phone: user.phone }
+        user: { 
+          _id: user._id, 
+          name: user.name, 
+          phone: user.phone,
+          avatarUrl: user.avatarUrl,
+          about: user.about
+        }
     });
   } catch (error: any) {
     console.error(error);

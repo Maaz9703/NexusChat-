@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Send } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import Sidebar from "./Sidebar";
+import ChatWindow from "./ChatWindow";
 import styles from "./Chat.module.css";
+import { ArrowLeft } from "lucide-react";
 
 interface User {
   _id: string;
   name: string;
   phone: string;
+  isOnline?: boolean;
 }
 
-interface Message {
+interface ChatObj {
   _id: string;
-  senderId: User;
-  text: string;
-  createdAt: string;
+  participants: User[];
 }
 
 interface ChatProps {
@@ -24,113 +24,48 @@ interface ChatProps {
 }
 
 export default function Chat({ currentUser, onLogout }: ChatProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [text, setText] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeChat, setActiveChat] = useState<ChatObj | null>(null);
+  const [activeOtherUser, setActiveOtherUser] = useState<User | null>(null);
 
-  // Fetch messages initially and poll every 3 seconds
-  useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchMessages = async () => {
-    try {
-      const res = await fetch("/api/messages");
-      const data = await res.json();
-      if (data.success) {
-        setMessages(data.messages);
-        scrollToBottom();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  const handleSelectChat = (chat: ChatObj, otherUser: User) => {
+    setActiveChat(chat);
+    setActiveOtherUser(otherUser);
   };
 
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  };
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-
-    setIsSending(true);
-    const textToSend = text;
-    setText("");
-
-    try {
-      const res = await fetch("/api/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ senderId: currentUser._id, text: textToSend }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setMessages((prev) => [...prev, data.message]);
-        scrollToBottom();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSending(false);
-    }
+  const handleBackToList = () => {
+    setActiveChat(null);
+    setActiveOtherUser(null);
   };
 
   return (
-    <div className={styles.chatContainer}>
-      <header className={styles.header}>
-        <h2>Nexus Chat</h2>
-        <button onClick={onLogout} className={styles.logoutBtn}>
-          Exit
-        </button>
-      </header>
-
-      <div className={styles.messagesArea} ref={scrollRef}>
-        <AnimatePresence>
-          {messages.map((msg) => {
-            const isMe = msg.senderId._id === currentUser._id;
-            return (
-              <motion.div
-                key={msg._id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`${styles.messageRow} ${
-                  isMe ? styles.myMessage : styles.otherMessage
-                }`}
-              >
-                {!isMe && (
-                  <span className={styles.senderName}>{msg.senderId.name}</span>
-                )}
-                <div className={styles.messageBubble}>{msg.text}</div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+    <div className={`${styles.chatApp} ${activeChat ? styles.chatActive : ''}`}>
+      <div className={styles.chatContainer}>
+        <div className={styles.sidebarWrapper}>
+          <Sidebar 
+            currentUser={currentUser} 
+            onSelectChat={handleSelectChat}
+            activeChatId={activeChat?._id}
+            onLogout={onLogout}
+          />
+        </div>
+        
+        {/* On mobile, we might need a custom wrapper to add a back button to the chat window,
+            but we can just overlay it or pass it. Let's pass a wrapper or handle it here! */}
+        <div className={styles.chatWindowWrapper}>
+          {activeChat && (
+            <div className={styles.mobileBackBtn}>
+               <button onClick={handleBackToList} className={styles.backButton}>
+                 <ArrowLeft size={24} />
+               </button>
+            </div>
+          )}
+          <ChatWindow 
+            chat={activeChat}
+            currentUser={currentUser}
+            otherUser={activeOtherUser}
+          />
+        </div>
       </div>
-
-      <form className={styles.inputContainer} onSubmit={handleSend}>
-        <input
-          type="text"
-          className={styles.input}
-          placeholder="Type a message..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={isSending}
-        />
-        <button
-          type="submit"
-          className={styles.sendButton}
-          disabled={!text.trim() || isSending}
-        >
-          <Send size={20} />
-        </button>
-      </form>
     </div>
   );
 }

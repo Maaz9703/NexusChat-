@@ -11,6 +11,18 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide your name'],
   },
+  avatarUrl: {
+    type: String,
+    default: '',
+  },
+  about: {
+    type: String,
+    default: 'Hey there! I am using NexusChat.',
+  },
+  isOnline: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
