@@ -1,0 +1,9 @@
+{
+  "appId": "com.gamingkrew.nexuschat",
+  "appName": "NexusChat",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://nexus-chat-puce.vercel.app"
+  }
+}
