@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { MessageSquarePlus, MoreVertical, Search, Check, CheckCheck } from "lucide-react";
 import styles from "./Sidebar.module.css";
-import { pusherClient } from "@/lib/pusher";
+import { getPusherClient } from "@/lib/pusher";
 
 interface User {
   _id: string;
@@ -39,18 +39,23 @@ export default function Sidebar({ currentUser, onSelectChat, activeChatId, onLog
     fetchChats();
     fetchContacts();
 
-    // Bind Pusher to listen for chat list updates (e.g. new message pushes chat to top)
-    const channel = pusherClient.subscribe(`user-${currentUser._id}`);
+    // Keep the chat list fresh: Pusher when configured, otherwise polling.
+    const pusher = getPusherClient();
+    if (!pusher) {
+      const timer = setInterval(fetchChats, 5000);
+      return () => clearInterval(timer);
+    }
+    const channel = pusher.subscribe(`user-${currentUser._id}`);
     channel.bind("chat-updated", () => {
        fetchChats(); // Refresh order and preview
     });
     return () => {
-      pusherClient.unsubscribe(`user-${currentUser._id}`);
+      pusher.unsubscribe(`user-${currentUser._id}`);
     };
   }, [currentUser._id]);
 
   const fetchChats = async () => {
-    const res = await fetch(`/api/chats?userId=${currentUser._id}`);
+    const res = await fetch(`/api/chats`);
     const data = await res.json();
     if (data.success) {
       setChats(data.chats);
@@ -71,7 +76,7 @@ export default function Sidebar({ currentUser, onSelectChat, activeChatId, onLog
       const res = await fetch("/api/chats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user1Id: currentUser._id, user2Id: contact._id }),
+        body: JSON.stringify({ user2Id: contact._id }),
       });
       const data = await res.json();
       if (data.success) {
@@ -139,7 +144,7 @@ export default function Sidebar({ currentUser, onSelectChat, activeChatId, onLog
                 </div>
                 <div className={styles.chatDetails}>
                   <div className={styles.chatName}>{contact.name}</div>
-                  <div className={styles.chatPreview}>{contact.phone}</div>
+                  <div className={styles.chatPreview}>{(contact as any).about || "Available"}</div>
                 </div>
               </div>
             ))}

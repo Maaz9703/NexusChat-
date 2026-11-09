@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, Paperclip, Smile, Phone, Video, Search } from "lucide-react";
 import styles from "./ChatWindow.module.css";
-import { pusherClient } from "@/lib/pusher";
+import { getPusherClient } from "@/lib/pusher";
 
 interface User {
   _id: string;
@@ -41,8 +41,14 @@ export default function ChatWindow({ chat, currentUser, otherUser }: ChatWindowP
   useEffect(() => {
     if (chat) {
       fetchMessages();
-      
-      const channel = pusherClient.subscribe(`chat-${chat._id}`);
+
+      const pusher = getPusherClient();
+      if (!pusher) {
+        // No real-time service configured: poll for new messages.
+        const timer = setInterval(fetchMessages, 3000);
+        return () => clearInterval(timer);
+      }
+      const channel = pusher.subscribe(`chat-${chat._id}`);
       channel.bind('incoming-message', (newMessage: Message) => {
         setMessages((prev) => {
            // Prevent duplicates
@@ -50,9 +56,9 @@ export default function ChatWindow({ chat, currentUser, otherUser }: ChatWindowP
            return [...prev, newMessage];
         });
       });
-      
+
       return () => {
-        pusherClient.unsubscribe(`chat-${chat._id}`);
+        pusher.unsubscribe(`chat-${chat._id}`);
       };
     } else {
       setMessages([]);
@@ -94,15 +100,13 @@ export default function ChatWindow({ chat, currentUser, otherUser }: ChatWindowP
       const res = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          senderId: currentUser._id, 
-          chatId: chat._id, 
-          text: textToSend 
-        }),
+        body: JSON.stringify({ chatId: chat._id, text: textToSend }),
       });
 
       const data = await res.json();
       if (data.success) {
+         // Pick up an instant reply (e.g. from the assistant) without waiting for the next poll.
+         setTimeout(fetchMessages, 400);
          // Pusher will update the list, but we can also manually add for instant feedback
          setMessages(prev => {
             if (prev.find(m => m._id === data.message._id)) return prev;

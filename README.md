@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NexusChat — Real-time Messaging App
 
-## Getting Started
+A WhatsApp-style chat app for web and Android. Built with **Next.js 16, TypeScript, MongoDB (Mongoose)** and **Pusher** for real-time delivery, with a **Capacitor** Android build. Deployed on **Vercel**.
 
-First, run the development server:
+**Live demo:** https://nexus-chat-puce.vercel.app
+→ Click **“Try as Guest — no sign-up”**, then chat with the built-in **Nexus Assistant** — or open the site in a second browser to message yourself.
+
+## Features
+
+- One-to-one chats with message history, delivery/read ticks and online status
+- Contact directory with search; start a new chat from any contact
+- Built-in assistant contact that replies instantly (great for demos)
+- Real-time updates via Pusher; automatic fallback to polling when Pusher isn’t configured
+- Animated 3D background (React Three Fiber) and a responsive, mobile-first UI
+- Android app packaged with Capacitor (GitHub Actions workflow builds the APK)
+
+## Security
+
+- Accounts use mobile number + password (salted **scrypt** hashes)
+- Sessions are **signed, httpOnly cookies** — the server decides who is sending, never the browser
+- Users can only read and post in chats they belong to
+- Phone numbers are never exposed through the API
+
+## Tech stack
+
+Next.js 16 · React 19 · TypeScript · MongoDB / Mongoose · Pusher · Framer Motion · React Three Fiber · Capacitor
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+MONGODB_URL=<MongoDB connection string>
+SESSION_SECRET=<long random string>
+# Optional real-time
+PUSHER_APP_ID=  PUSHER_SECRET=
+NEXT_PUBLIC_PUSHER_KEY=  NEXT_PUBLIC_PUSHER_CLUSTER=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## API
 
-## Learn More
+| Method | Route | Description |
+| --- | --- | --- |
+| GET / POST / DELETE | `/api/auth` | current user · sign in / register / guest · sign out |
+| GET / POST | `/api/chats` | my chats · open a chat with a user |
+| GET / POST | `/api/messages?chatId=` | messages in my chat · send a message |
+| GET | `/api/users` | contacts (no phone numbers) |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built by [Maaz](https://github.com/Maaz9703).

@@ -13,29 +13,27 @@ interface User {
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("chatUser");
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
+    // Restore the session from the secure cookie.
+    fetch("/api/auth")
+      .then((r) => r.json())
+      .then((d) => setCurrentUser(d.user ?? null))
+      .catch(() => setCurrentUser(null))
+      .finally(() => setChecking(false));
   }, []);
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("chatUser");
+  const handleLogout = async () => {
+    await fetch("/api/auth", { method: "DELETE" }).catch(() => {});
     setCurrentUser(null);
   };
 
   return (
-    <main style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
+    <main style={{ width: "100vw", height: "100dvh", overflow: "hidden" }}>
       <ThreeBackground />
-      {!currentUser ? (
-        <Login onLogin={handleLogin} />
+      {checking ? null : !currentUser ? (
+        <Login onLogin={setCurrentUser} />
       ) : (
         <Chat currentUser={currentUser} onLogout={handleLogout} />
       )}

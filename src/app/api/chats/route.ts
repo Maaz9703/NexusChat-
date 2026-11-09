@@ -1,59 +1,48 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import Chat from '@/models/Chat';
 import User from '@/models/User';
 import Message from '@/models/Message';
+import { getSessionUserId } from '@/lib/session';
 
-export async function GET(req: Request) {
+const unauthorized = () => NextResponse.json({ error: 'Please sign in.' }, { status: 401 });
+
+// Lists the signed-in user's chats.
+export async function GET() {
+  const userId = await getSessionUserId();
+  if (!userId) return unauthorized();
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-    }
-
     const chats = await Chat.find({ participants: userId })
-      .populate('participants', 'name phone avatarUrl isOnline lastSeen')
-      .populate({
-        path: 'lastMessage',
-        model: Message,
-        select: 'text createdAt status type'
-      })
+      .populate('participants', 'name avatarUrl isOnline lastSeen about')
+      .populate({ path: 'lastMessage', model: Message, select: 'text createdAt status type senderId' })
       .sort({ updatedAt: -1 });
-
     return NextResponse.json({ success: true, chats });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Could not load chats.' }, { status: 500 });
   }
 }
 
+// Opens (or creates) a chat between the signed-in user and another user.
 export async function POST(req: Request) {
+  const userId = await getSessionUserId();
+  if (!userId) return unauthorized();
   try {
     await dbConnect();
-    const body = await req.json();
-    const { user1Id, user2Id } = body;
-
-    if (!user1Id || !user2Id) {
-      return NextResponse.json({ error: 'Both user IDs are required' }, { status: 400 });
+    const { user2Id } = await req.json();
+    if (!user2Id || !mongoose.isValidObjectId(user2Id) || user2Id === userId) {
+      return NextResponse.json({ error: 'Choose someone to chat with.' }, { status: 400 });
     }
+    if (!(await User.exists({ _id: user2Id }))) return NextResponse.json({ error: 'User not found.' }, { status: 404 });
 
-    // Check if chat already exists
-    let chat = await Chat.findOne({
-      participants: { $all: [user1Id, user2Id], $size: 2 }
-    }).populate('participants', 'name phone avatarUrl isOnline lastSeen');
-
-    if (!chat) {
-      // Create new chat
-      chat = await Chat.create({
-        participants: [user1Id, user2Id]
-      });
-      await chat.populate('participants', 'name phone avatarUrl isOnline lastSeen');
-    }
-
+    let chat = await Chat.findOne({ participants: { $all: [userId, user2Id], $size: 2 } });
+    if (!chat) chat = await Chat.create({ participants: [userId, user2Id] });
+    await chat.populate('participants', 'name avatarUrl isOnline lastSeen about');
     return NextResponse.json({ success: true, chat });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Could not open chat.' }, { status: 500 });
   }
 }

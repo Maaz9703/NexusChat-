@@ -11,6 +11,14 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide your name'],
   },
+  passwordHash: {
+    type: String,
+    select: false,
+  },
+  isGuest: {
+    type: Boolean,
+    default: false,
+  },
   avatarUrl: {
     type: String,
     default: '',
