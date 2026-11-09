@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomInt } from 'crypto';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { ensureBot } from '@/lib/bot';
+import { ensureBot, welcomeNewUser } from '@/lib/bot';
 import { endSession, getSessionUserId, hashPassword, startSession, verifyPassword } from '@/lib/session';
 
 const publicUser = (u: any) => ({ _id: u._id, name: u.name, phone: u.phone, avatarUrl: u.avatarUrl, about: u.about, isGuest: u.isGuest });
@@ -34,6 +34,7 @@ export async function POST(req: Request) {
         isGuest: true,
         about: 'Exploring NexusChat',
       });
+      await welcomeNewUser(String(guest._id));
       await startSession(String(guest._id));
       return NextResponse.json({ success: true, user: publicUser(guest) });
     }
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
       if (String(name).trim().length < 2) return NextResponse.json({ error: 'Please enter your name.' }, { status: 400 });
       if (await User.exists({ phone })) return NextResponse.json({ error: 'This number is already registered. Please sign in.' }, { status: 409 });
       const user = await User.create({ phone, name: String(name).trim().slice(0, 40), passwordHash: hashPassword(String(password)) });
+      await welcomeNewUser(String(user._id));
       await startSession(String(user._id));
       return NextResponse.json({ success: true, user: publicUser(user) });
     }

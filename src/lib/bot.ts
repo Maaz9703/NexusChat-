@@ -10,6 +10,18 @@ export async function ensureBot() {
   return bot;
 }
 
+/** Gives a brand-new account a chat with the assistant so the inbox isn't empty. */
+export async function welcomeNewUser(userId: string) {
+  const [{ default: Chat }, { default: Message }] = await Promise.all([import('@/models/Chat'), import('@/models/Message')]);
+  const bot = await ensureBot();
+  const chat = await Chat.create({ participants: [userId, bot._id] });
+  const msg = await Message.create({
+    senderId: bot._id, chatId: chat._id, type: 'text', status: 'delivered',
+    text: 'Welcome to NexusChat! 👋 I’m the Nexus Assistant. Send me a message to try it out, or tap the new-chat icon to message another user.',
+  });
+  await Chat.findByIdAndUpdate(chat._id, { lastMessage: msg._id, updatedAt: new Date() });
+}
+
 const REPLIES: [RegExp, string][] = [
   [/\b(hi|hello|hey|salam|assalam)\b/i, 'Hey! 👋 Welcome to NexusChat. Try opening “New chat” to message another user, or keep chatting with me.'],
   [/how are you|kaise|kese/i, 'Running smoothly, thanks! Messages here are stored in MongoDB and update live.'],
