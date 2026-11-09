@@ -1,13 +1,5 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URL;
-
-if (!MONGODB_URI) {
-  throw new Error(
-    'Please define the MONGODB_URL environment variable inside .env.local'
-  );
-}
-
 let cached = (global as any).mongoose;
 
 if (!cached) {
@@ -17,6 +9,14 @@ if (!cached) {
 async function dbConnect() {
   if (cached.conn) {
     return cached.conn;
+  }
+
+  // Checked here, not at import time, so the app can build without the variable.
+  const MONGODB_URI = process.env.MONGODB_URL;
+  if (!MONGODB_URI) {
+    throw new Error(
+      'Please define the MONGODB_URL environment variable inside .env.local'
+    );
   }
 
   if (!cached.promise) {
